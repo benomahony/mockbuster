@@ -33,12 +33,8 @@ def detect_mocks(code: str) -> list[dict[str, str | int]]:
             if node.module in MOCK_MODULES:
                 assert hasattr(node, "lineno"), "Node must have lineno"
                 assert node.lineno > 0, "Line number must be positive"
-                violations.append(
-                    {
-                        "line": node.lineno,
-                        "message": f"Mock import detected: {node.module}",
-                    }
-                )
+                msg = f"Mock import detected: {node.module} - Use dependency injection"
+                violations.append({"line": node.lineno, "message": msg})
 
         # Detect direct import of mock module
         elif isinstance(node, ast.Import):
@@ -46,12 +42,8 @@ def detect_mocks(code: str) -> list[dict[str, str | int]]:
                 if alias.name in MOCK_MODULES:
                     assert hasattr(node, "lineno"), "Node must have lineno"
                     assert node.lineno > 0, "Line number must be positive"
-                    violations.append(
-                        {
-                            "line": node.lineno,
-                            "message": f"Mock import detected: {alias.name}",
-                        }
-                    )
+                    msg = f"Mock import detected: {alias.name} - Use dependency injection"
+                    violations.append({"line": node.lineno, "message": msg})
 
         # Detect mocker fixture usage in function parameters
         elif isinstance(node, ast.FunctionDef):
@@ -59,11 +51,7 @@ def detect_mocks(code: str) -> list[dict[str, str | int]]:
                 if arg.arg == "mocker":
                     assert hasattr(node, "lineno"), "Node must have lineno"
                     assert node.lineno > 0, "Line number must be positive"
-                    violations.append(
-                        {
-                            "line": node.lineno,
-                            "message": "pytest-mock 'mocker' fixture detected",
-                        }
-                    )
+                    msg = "pytest-mock 'mocker' fixture detected - Use dependency injection"
+                    violations.append({"line": node.lineno, "message": msg})
 
     return violations
