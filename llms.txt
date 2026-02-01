@@ -1,0 +1,20 @@
+# mockbuster
+
+> Python project: mockbuster
+
+## Documentation
+
+- [Installation](docs/index.md#installation): Install mockbuster using pip or uv
+- [Usage](docs/index.md#usage): Learn how to use mockbuster as a library or CLI tool
+- [Development](docs/index.md#development): Set up a development environment and run tests
+
+## Project Information
+
+- **Source Code**: https://github.com/benomahony/mockbuster
+- **PyPI Package**: https://pypi.org/project/mockbuster
+- **Documentation**: https://benomahony.github.io/mockbuster
+
+## AI Integration
+
+- **MCP Server**: Model Context Protocol server available at `src/mockbuster/mcp_server.py` for AI-powered documentation access
+- **Agent Skill**: Claude Code skill available in `.skills/mockbuster/SKILL.md` for enhanced project interaction

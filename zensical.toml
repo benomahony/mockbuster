@@ -1,0 +1,12 @@
+[project]
+site_name = "mockbuster"
+site_url = "https://benomahony.github.io/mockbuster"
+site_description = "Python project: mockbuster"
+site_author = "benomahony"
+copyright = "&copy; 2026 benomahony"
+docs_dir = "docs"
+site_dir = "site"
+use_directory_urls = true
+
+[project.theme]
+variant = "modern"

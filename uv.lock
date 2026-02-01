@@ -1490,6 +1490,7 @@ name = "mockbuster"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "mcp" },
     { name = "rich" },
     { name = "typer" },
 ]
@@ -1513,6 +1514,7 @@ requires-dist = [
     { name = "basedpyright", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "cliqa", marker = "extra == 'dev'", specifier = ">=0.1.0" },
     { name = "deptry", marker = "extra == 'dev'", specifier = ">=0.12.0" },
+    { name = "mcp", specifier = ">=1.0.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.6.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
     { name = "pytest-examples", marker = "extra == 'dev'", specifier = ">=0.0.10" },
