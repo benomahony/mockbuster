@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import typer
@@ -12,15 +13,17 @@ app = typer.Typer(
 )
 console = Console()
 
+DEFAULT_TESTS_PATH = Path("tests/")
+
 
 @app.command()
 def scan(
-    path: Path = typer.Argument(..., help="File or directory to scan"),
+    path: Path = typer.Argument(default=DEFAULT_TESTS_PATH, help="File or directory to scan"),
     strict: bool = typer.Option(False, "--strict", help="Exit with error code if mocks found"),
 ) -> None:
     """Scan Python files for mocking usage."""
-    assert path is not None, "Path must not be None"
-    assert isinstance(path, Path), "Path must be a Path object"
+    assert path.exists(), f"Path does not exist: {path}"
+    assert os.access(path, os.R_OK), f"Path is not readable: {path}"
 
     total_violations = 0
 
