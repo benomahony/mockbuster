@@ -18,7 +18,7 @@ def test_foo():
 
     result = runner.invoke(app, [str(test_file)])
     assert result.exit_code == 0
-    assert "unittest.mock" in result.stdout
+    assert "Mock()" in result.stdout  # Detects usage, not import
 
 
 def test_scan_file_clean(tmp_path: Path):
