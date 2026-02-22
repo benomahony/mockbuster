@@ -86,7 +86,7 @@ def _check_function_args(node: ast.FunctionDef, violations: list[dict[str, str |
                 "pytest-mock 'mocker' fixture detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": node.lineno, "message": msg})
+            violations.append({"line": node.lineno, "message": msg, "category": "fixtures"})
         elif arg.arg == "monkeypatch":
             assert node.lineno > 0, "Line number must be positive"
             assert isinstance(arg.arg, str), "Argument name must be a string"
@@ -94,7 +94,7 @@ def _check_function_args(node: ast.FunctionDef, violations: list[dict[str, str |
                 "pytest 'monkeypatch' fixture detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": node.lineno, "message": msg})
+            violations.append({"line": node.lineno, "message": msg, "category": "fixtures"})
 
 
 def _check_decorators(
@@ -115,7 +115,7 @@ def _check_decorators(
                 f"@{patch_name} decorator detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": decorator.lineno, "message": msg})
+            violations.append({"line": decorator.lineno, "message": msg, "category": "patch"})
             if isinstance(decorator, ast.Call):
                 call_id = id(decorator)
                 assert call_id not in processed_calls, "Call ID should not be already processed"
@@ -146,7 +146,7 @@ def _check_calls(
                 f"{mock_class}() instantiation detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": node.lineno, "message": msg})
+            violations.append({"line": node.lineno, "message": msg, "category": "mock_classes"})
             return
 
     if "patch" not in disabled and isinstance(node.func, ast.Attribute):
@@ -160,7 +160,7 @@ def _check_calls(
                 f"{patch_name}() call detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": node.lineno, "message": msg})
+            violations.append({"line": node.lineno, "message": msg, "category": "patch"})
 
 
 def _check_with_statements(
@@ -181,7 +181,7 @@ def _check_with_statements(
                 f"{patch_name}() context manager detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": item.context_expr.lineno, "message": msg})
+            violations.append({"line": item.context_expr.lineno, "message": msg, "category": "patch"})
             if isinstance(item.context_expr, ast.Call):
                 call_id = id(item.context_expr)
                 assert call_id not in processed_calls, "Call ID should not be already processed"

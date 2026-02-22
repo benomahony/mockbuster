@@ -73,6 +73,34 @@ mockbuster tests/ --disable fixtures
 mockbuster tests/ --disable mock_classes --disable patch
 ```
 
+### --update-baseline
+
+Record all current violations as the baseline and exit with code 0.
+
+**Type:** Flag (no value required)
+
+**Default:** `False`
+
+**Example:**
+
+```bash
+mockbuster tests/ --update-baseline
+```
+
+### --no-baseline
+
+Ignore the baseline file and report all violations.
+
+**Type:** Flag (no value required)
+
+**Default:** `False`
+
+**Example:**
+
+```bash
+mockbuster tests/ --no-baseline
+```
+
 ### --help
 
 Show help message and exit.

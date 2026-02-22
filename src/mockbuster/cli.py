@@ -4,6 +4,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from mockbuster.baseline import build_baseline, filter_baselined, load_baseline, write_baseline
 from mockbuster.config import VALID_CATEGORIES, load_config
 from mockbuster.core import detect_mocks
 
@@ -26,6 +27,16 @@ def scan(
         "--disable",
         help="Disable a category (mock_classes, patch, fixtures). Repeatable.",
     ),
+    update_baseline: bool = typer.Option(
+        False,
+        "--update-baseline",
+        help="Record all current violations as the baseline and exit.",
+    ),
+    no_baseline: bool = typer.Option(
+        False,
+        "--no-baseline",
+        help="Ignore the baseline file and report all violations.",
+    ),
 ) -> None:
     """Scan Python files for mocking usage."""
     assert path.exists(), f"Path does not exist: {path}"
@@ -38,6 +49,8 @@ def scan(
         console.print(f"[red]Configuration error: {e}[/red]")
         raise typer.Exit(1)
 
+    baseline_path = config.baseline_path
+
     merged = config.disabled_categories | set(disable)
     unknown = merged - VALID_CATEGORIES
     if unknown:
@@ -48,30 +61,72 @@ def scan(
         raise typer.Exit(1)
 
     disabled_categories = frozenset(merged)
-    total_violations = 0
 
     if path.is_file():
         files = [path]
     elif path.is_dir():
-        files = list(path.rglob("*.py"))
+        files = sorted(path.rglob("*.py"))
     else:
         console.print(f"[red]Error: {path} is not a valid file or directory[/red]")
         raise typer.Exit(1)
 
+    # Collect all violations keyed by path string
+    violations_by_file: dict[str, list[dict]] = {}
     for file in files:
         code = file.read_text()
         violations = detect_mocks(code, disabled_categories=disabled_categories)
-
         if violations:
-            console.print(f"\n[yellow]{file}[/yellow]")
-            for violation in violations:
+            file_key = str(file)
+            violations_by_file[file_key] = violations
+
+    # --update-baseline: write and exit
+    if update_baseline:
+        baseline_data = build_baseline(violations_by_file)
+
+        # Preserve entries for files outside the current scan so that running
+        # --update-baseline on a subpath does not wipe the rest of the baseline.
+        existing = load_baseline(baseline_path)
+        scanned_keys = {str(f) for f in files}
+        for file_key, counts in existing.items():
+            if file_key not in scanned_keys:
+                baseline_data[file_key] = counts
+
+        write_baseline(baseline_data, baseline_path)
+        total = sum(sum(counts.values()) for counts in baseline_data.values())
+        console.print(
+            f"[green]Baseline written: {total} violation(s) across "
+            f"{len(baseline_data)} file(s) suppressed.[/green]"
+        )
+        return
+
+    # Load baseline (unless --no-baseline)
+    baseline = {} if no_baseline else load_baseline(baseline_path)
+
+    total_violations = 0
+    total_suppressed = 0
+
+    for file_key, violations in violations_by_file.items():
+        if baseline:
+            visible, suppressed = filter_baselined(violations, file_key, baseline)
+            total_suppressed += suppressed
+        else:
+            visible = violations
+        if visible:
+            console.print(f"\n[yellow]{file_key}[/yellow]")
+            for violation in visible:
                 console.print(f"  Line {violation['line']}: {violation['message']}")
                 total_violations += 1
 
     if total_violations > 0:
-        console.print(f"\n[red]Found {total_violations} mock usage(s)[/red]")
+        suppressed_note = f"  [{total_suppressed} baselined]" if total_suppressed else ""
+        console.print(f"\n[red]Found {total_violations} mock usage(s){suppressed_note}[/red]")
         if strict:
             raise typer.Exit(1)
+    elif total_suppressed > 0:
+        console.print(
+            f"[green]No new mocking usage detected[/green] "
+            f"[dim]({total_suppressed} baselined)[/dim]"
+        )
     else:
         console.print("[green]No mocking usage detected[/green]")
 

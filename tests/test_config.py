@@ -35,8 +35,8 @@ def test_load_config_invalid_category_raises(tmp_path, bad_name):
 
 def test_load_config_no_pyproject(tmp_path):
     config = load_config(start_dir=tmp_path)
-    assert config == MockbusterConfig()
     assert config.disabled_categories == frozenset()
+    assert config.baseline_path == tmp_path / ".mockbuster-baseline.json"
 
 
 def test_load_config_pyproject_without_mockbuster_section(tmp_path):
@@ -44,7 +44,8 @@ def test_load_config_pyproject_without_mockbuster_section(tmp_path):
     pyproject.write_text("[tool.ruff]\nline-length = 88\n")
 
     config = load_config(start_dir=tmp_path)
-    assert config == MockbusterConfig()
+    assert config.disabled_categories == frozenset()
+    assert config.baseline_path == tmp_path / ".mockbuster-baseline.json"
 
 
 def test_load_config_found_by_walking_up(tmp_path):
