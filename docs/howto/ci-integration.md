@@ -66,16 +66,25 @@ Add to `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: local
+  - repo: https://github.com/benomahony/mockbuster
+    rev: v0.1.3
     hooks:
       - id: mockbuster
-        name: mockbuster
-        entry: uv run mockbuster
-        language: system
-        types: [python]
-        files: ^tests/
-        pass_filenames: true
-        args: ["--strict"]
+```
+
+The hook scans the directory configured via `[tool.mockbuster] path` in your `pyproject.toml` (default: `tests/`). If your tests live elsewhere, set the path:
+
+```toml
+[tool.mockbuster]
+path = "test/"
+```
+
+If you want to restrict which files trigger the hook, use `files` in your local config:
+
+```yaml
+hooks:
+  - id: mockbuster
+    files: ^test/
 ```
 
 ### Install Hook

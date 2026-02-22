@@ -1,0 +1,8 @@
+- id: mockbuster
+  name: mockbuster
+  description: Detect mocking usage in Python tests
+  entry: mockbuster
+  language: python
+  types: [python]
+  pass_filenames: false
+  args: ["--strict"]

@@ -149,7 +149,8 @@ def _write_py(tmp_path, filename, content):
     return f
 
 
-def test_cli_update_baseline_creates_file(tmp_path):
+def test_cli_update_baseline_creates_file(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
     result = runner.invoke(app, [str(tmp_path), "--update-baseline"])
     assert result.exit_code == 0
@@ -161,7 +162,8 @@ def test_cli_update_baseline_creates_file(tmp_path):
     assert len(data) >= 1
 
 
-def test_cli_baseline_suppresses_existing_violations(tmp_path):
+def test_cli_baseline_suppresses_existing_violations(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
 
     # First: record baseline
@@ -174,7 +176,8 @@ def test_cli_baseline_suppresses_existing_violations(tmp_path):
     assert "baselined" in result.output
 
 
-def test_cli_baseline_reports_new_violation(tmp_path):
+def test_cli_baseline_reports_new_violation(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
 
     # Record baseline with 1 Mock()
@@ -187,8 +190,9 @@ def test_cli_baseline_reports_new_violation(tmp_path):
     assert "baselined" in result.output
 
 
-def test_cli_update_baseline_subpath_preserves_other_entries(tmp_path):
+def test_cli_update_baseline_subpath_preserves_other_entries(tmp_path, monkeypatch):
     """--update-baseline on a subpath must not wipe baseline entries for other files."""
+    monkeypatch.chdir(tmp_path)
     unit = tmp_path / "unit"
     integration = tmp_path / "integration"
     unit.mkdir()
@@ -212,7 +216,8 @@ def test_cli_update_baseline_subpath_preserves_other_entries(tmp_path):
     assert len(partial_data) == 2
 
 
-def test_cli_no_baseline_shows_all(tmp_path):
+def test_cli_no_baseline_shows_all(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
 
     # Record baseline
@@ -222,3 +227,41 @@ def test_cli_no_baseline_shows_all(tmp_path):
     result = runner.invoke(app, [str(tmp_path), "--no-baseline"])
     assert "Found" in result.output
     assert "Mock()" in result.output
+
+
+def test_cli_multiple_file_args(tmp_path, monkeypatch):
+    """Multiple file paths are all scanned."""
+    monkeypatch.chdir(tmp_path)
+    f1 = _write_py(tmp_path, "test_a.py", "def test_a():\n    m = Mock()\n")
+    f2 = _write_py(tmp_path, "test_b.py", "def test_b():\n    m = Mock()\n")
+
+    result = runner.invoke(app, [str(f1), str(f2)])
+    assert result.exit_code == 0
+    assert "test_a.py" in result.output
+    assert "test_b.py" in result.output
+    assert "Found 2 mock usage(s)" in result.output
+
+
+def test_cli_dir_arg_scans_recursively(tmp_path, monkeypatch):
+    """A directory argument recursively finds all .py files."""
+    monkeypatch.chdir(tmp_path)
+    sub = tmp_path / "sub"
+    sub.mkdir()
+    _write_py(sub, "test_nested.py", "def test_n():\n    m = Mock()\n")
+
+    result = runner.invoke(app, [str(tmp_path)])
+    assert result.exit_code == 0
+    assert "test_nested.py" in result.output
+
+
+def test_cli_no_args_uses_config_path(tmp_path, monkeypatch):
+    """No positional args → falls back to default_path from config (tests/)."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "pyproject.toml").write_text('[tool.mockbuster]\npath = "mytests/"\n')
+    mytests = tmp_path / "mytests"
+    mytests.mkdir()
+    _write_py(mytests, "test_foo.py", "def test_foo():\n    m = Mock()\n")
+
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+    assert "test_foo.py" in result.output

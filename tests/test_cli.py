@@ -7,7 +7,8 @@ from mockbuster.cli import app
 runner = CliRunner()
 
 
-def test_scan_file_with_mocks(tmp_path: Path):
+def test_scan_file_with_mocks(tmp_path: Path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     test_file = tmp_path / "test_mocks.py"
     test_file.write_text("""
 from unittest.mock import Mock

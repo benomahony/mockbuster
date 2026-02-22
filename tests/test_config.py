@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from mockbuster.config import MockbusterConfig, load_config
@@ -57,3 +59,30 @@ def test_load_config_found_by_walking_up(tmp_path):
 
     config = load_config(start_dir=subdir)
     assert config.disabled_categories == frozenset({"fixtures"})
+
+
+def test_load_config_default_path_fallback(tmp_path):
+    """When path key is absent, default_path falls back to tests/."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.mockbuster]\n")
+
+    config = load_config(start_dir=tmp_path)
+    assert config.default_path == Path("tests/")
+
+
+def test_load_config_custom_path(tmp_path):
+    """path key in pyproject.toml is stored as a relative Path."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text('[tool.mockbuster]\npath = "test/"\n')
+
+    config = load_config(start_dir=tmp_path)
+    assert config.default_path == Path("test/")
+
+
+def test_load_config_no_section_default_path(tmp_path):
+    """No [tool.mockbuster] section → default_path is tests/."""
+    pyproject = tmp_path / "pyproject.toml"
+    pyproject.write_text("[tool.ruff]\nline-length = 88\n")
+
+    config = load_config(start_dir=tmp_path)
+    assert config.default_path == Path("tests/")
