@@ -4,13 +4,15 @@ Python API documentation for mockbuster.
 
 ## Module: `mockbuster`
 
-### `detect_mocks(code: str) -> list[dict[str, str | int]]`
+### `detect_mocks(code: str, *, respect_ignores: bool = True, disabled_categories: frozenset[str] | None = None) -> list[dict[str, str | int]]`
 
 Detect mocking usage in Python source code.
 
 **Parameters:**
 
 - `code` (str): Python source code to analyze
+- `respect_ignores` (bool): Whether to respect `# mockbuster: ignore` comments. Default: `True`.
+- `disabled_categories` (frozenset[str] | None): Set of category names to skip. Valid values: `"mock_classes"`, `"patch"`, `"fixtures"`. `None` means all categories enabled.
 
 **Returns:**
 
@@ -239,7 +241,12 @@ for file_path, violations in all_violations.items():
 Full type signature:
 
 ```python
-def detect_mocks(code: str) -> list[dict[str, str | int]]:
+def detect_mocks(
+    code: str,
+    *,
+    respect_ignores: bool = True,
+    disabled_categories: frozenset[str] | None = None,
+) -> list[dict[str, str | int]]:
     ...
 ```
 

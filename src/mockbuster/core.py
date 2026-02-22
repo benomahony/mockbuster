@@ -123,7 +123,10 @@ def _check_decorators(
 
 
 def _check_calls(
-    node: ast.Call, violations: list[dict[str, str | int]], processed_calls: set[int]
+    node: ast.Call,
+    violations: list[dict[str, str | int]],
+    processed_calls: set[int],
+    disabled: frozenset[str] = frozenset(),
 ) -> None:
     """Check function calls for mock/patch usage."""
     assert hasattr(node, "func"), "Call node must have func attribute"
@@ -132,18 +135,21 @@ def _check_calls(
     if id(node) in processed_calls:
         return
 
-    mock_class = _get_mock_class_name(node.func)
-    if mock_class:
-        assert node.lineno > 0, "Call line number must be positive"
-        assert isinstance(mock_class, str) and len(mock_class) > 0, (
-            "Mock class name must be non-empty string"
-        )
-        msg = (
-            f"{mock_class}() instantiation detected - "
-            "Use real objects, dependency injection, or integration tests"
-        )
-        violations.append({"line": node.lineno, "message": msg})
-    elif isinstance(node.func, ast.Attribute):
+    if "mock_classes" not in disabled:
+        mock_class = _get_mock_class_name(node.func)
+        if mock_class:
+            assert node.lineno > 0, "Call line number must be positive"
+            assert isinstance(mock_class, str) and len(mock_class) > 0, (
+                "Mock class name must be non-empty string"
+            )
+            msg = (
+                f"{mock_class}() instantiation detected - "
+                "Use real objects, dependency injection, or integration tests"
+            )
+            violations.append({"line": node.lineno, "message": msg})
+            return
+
+    if "patch" not in disabled and isinstance(node.func, ast.Attribute):
         patch_name = _get_patch_name(node.func)
         if patch_name:
             assert node.lineno > 0, "Call line number must be positive"
@@ -182,12 +188,19 @@ def _check_with_statements(
                 processed_calls.add(call_id)
 
 
-def detect_mocks(code: str, *, respect_ignores: bool = True) -> list[dict[str, str | int]]:
+def detect_mocks(
+    code: str,
+    *,
+    respect_ignores: bool = True,
+    disabled_categories: frozenset[str] | None = None,
+) -> list[dict[str, str | int]]:
     """Detect mocking usage in Python code.
 
     Args:
         code: Python source code to analyze
         respect_ignores: Whether to respect mockbuster: ignore comments
+        disabled_categories: Set of category names to skip. Valid values:
+            "mock_classes", "patch", "fixtures". None means all enabled.
 
     Returns:
         List of violations with line numbers and messages
@@ -195,6 +208,7 @@ def detect_mocks(code: str, *, respect_ignores: bool = True) -> list[dict[str, s
     assert code is not None, "Code must not be None"
     assert isinstance(code, str), "Code must be a string"
 
+    disabled: frozenset[str] = disabled_categories if disabled_categories is not None else frozenset()
     violations: list[dict[str, str | int]] = []
     processed_calls: set[int] = set()
 
@@ -205,12 +219,15 @@ def detect_mocks(code: str, *, respect_ignores: bool = True) -> list[dict[str, s
 
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
-            _check_function_args(node, violations)
-            _check_decorators(node, violations, processed_calls)
+            if "fixtures" not in disabled:
+                _check_function_args(node, violations)
+            if "patch" not in disabled:
+                _check_decorators(node, violations, processed_calls)
         elif isinstance(node, ast.Call):
-            _check_calls(node, violations, processed_calls)
+            _check_calls(node, violations, processed_calls, disabled)
         elif isinstance(node, ast.With):
-            _check_with_statements(node, violations, processed_calls)
+            if "patch" not in disabled:
+                _check_with_statements(node, violations, processed_calls)
 
     if respect_ignores:
         ignored_lines = extract_ignored_lines(code)

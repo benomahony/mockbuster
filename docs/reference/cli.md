@@ -58,6 +58,21 @@ mockbuster tests/ --strict
 mockbuster tests/
 ```
 
+### --disable
+
+Disable detection of a specific category. Repeatable.
+
+**Valid values:** `mock_classes`, `patch`, `fixtures`
+
+**Default:** All categories enabled
+
+**Examples:**
+
+```bash
+mockbuster tests/ --disable fixtures
+mockbuster tests/ --disable mock_classes --disable patch
+```
+
 ### --help
 
 Show help message and exit.
