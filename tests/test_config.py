@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from mockbuster.config import MockbusterConfig, load_config
+from mockbuster.config import load_config
 
 
 @pytest.mark.parametrize(
@@ -18,7 +18,7 @@ def test_load_config_disable(tmp_path, disable_list, expected):
     pyproject = tmp_path / "pyproject.toml"
     if disable_list:
         items = ", ".join(f'"{item}"' for item in disable_list)
-        pyproject.write_text(f'[tool.mockbuster]\ndisable = [{items}]\n')
+        pyproject.write_text(f"[tool.mockbuster]\ndisable = [{items}]\n")
     else:
         pyproject.write_text("[tool.mockbuster]\ndisable = []\n")
 
