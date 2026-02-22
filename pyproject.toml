@@ -92,3 +92,10 @@ replace = 'version = "{new_version}"'
 filename = "src/mockbuster/__init__.py"
 search = '__version__ = "{current_version}"'
 replace = '__version__ = "{new_version}"'
+
+# Keep the pre-commit hook example in the docs pointing at the latest release.
+# Zensical has no variable injection, so bumpversion is the simplest option.
+[[tool.bumpversion.files]]
+filename = "docs/howto/ci-integration.md"
+search = 'rev: v{current_version}'
+replace = 'rev: v{new_version}'
