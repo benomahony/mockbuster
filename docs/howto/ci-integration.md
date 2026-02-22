@@ -212,9 +212,20 @@ make ci
 If you have an existing codebase with mocks:
 
 1. **Start in non-strict mode** - Just report violations without failing
-2. **Fix one directory at a time** - Refactor incrementally
-3. **Add ignored paths** - Temporarily skip certain files
+2. **Fix one category at a time** - Disable categories you haven't refactored yet
+3. **Add per-line ignores** - Temporarily skip specific lines with `# mockbuster: ignore`
 4. **Enable strict mode** - Once all violations are fixed
+
+### Disable categories via pyproject.toml
+
+Start with all categories disabled, then remove entries as you refactor:
+
+```toml
+[tool.mockbuster]
+disable = ["mock_classes", "patch", "fixtures"]
+```
+
+Remove one entry per sprint as you clean up that category. See [Configuration](../reference/configuration.md) for details.
 
 ### Example: Gradual Migration
 

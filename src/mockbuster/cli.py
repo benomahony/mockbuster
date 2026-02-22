@@ -4,6 +4,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from mockbuster.config import VALID_CATEGORIES, load_config
 from mockbuster.core import detect_mocks
 
 app = typer.Typer(
@@ -20,11 +21,33 @@ DEFAULT_TESTS_PATH = Path("tests/")
 def scan(
     path: Path = typer.Argument(default=DEFAULT_TESTS_PATH, help="File or directory to scan"),
     strict: bool = typer.Option(False, "--strict", help="Exit with error code if mocks found"),
+    disable: list[str] = typer.Option(
+        [],
+        "--disable",
+        help="Disable a category (mock_classes, patch, fixtures). Repeatable.",
+    ),
 ) -> None:
     """Scan Python files for mocking usage."""
     assert path.exists(), f"Path does not exist: {path}"
     assert os.access(path, os.R_OK), f"Path is not readable: {path}"
 
+    start_dir = path if path.is_dir() else path.parent
+    try:
+        config = load_config(start_dir=start_dir)
+    except ValueError as e:
+        console.print(f"[red]Configuration error: {e}[/red]")
+        raise typer.Exit(1)
+
+    merged = config.disabled_categories | set(disable)
+    unknown = merged - VALID_CATEGORIES
+    if unknown:
+        console.print(
+            f"[red]Error: Unknown category '{next(iter(unknown))}'. "
+            f"Valid categories: {', '.join(sorted(VALID_CATEGORIES))}[/red]"
+        )
+        raise typer.Exit(1)
+
+    disabled_categories = frozenset(merged)
     total_violations = 0
 
     if path.is_file():
@@ -37,7 +60,7 @@ def scan(
 
     for file in files:
         code = file.read_text()
-        violations = detect_mocks(code)
+        violations = detect_mocks(code, disabled_categories=disabled_categories)
 
         if violations:
             console.print(f"\n[yellow]{file}[/yellow]")

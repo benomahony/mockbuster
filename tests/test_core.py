@@ -1,3 +1,5 @@
+import pytest
+
 from mockbuster.core import detect_mocks
 
 
@@ -239,3 +241,25 @@ def test_foo(mocker, monkeypatch):
     messages = " ".join(v["message"] for v in violations)
     assert "mocker" in messages
     assert "monkeypatch" in messages
+
+
+@pytest.mark.parametrize(
+    "disabled,code_snippet,expected_count",
+    [
+        # disabling fixtures suppresses mocker/monkeypatch violations
+        (frozenset({"fixtures"}), "def test_foo(mocker): pass", 0),
+        (frozenset({"fixtures"}), "def test_foo(monkeypatch): pass", 0),
+        # disabling patch suppresses decorator/ctx-mgr/call violations
+        (frozenset({"patch"}), "@patch('x')\ndef test_foo(): pass", 0),
+        (frozenset({"patch"}), "with patch('x'): pass", 0),
+        # disabling mock_classes suppresses instantiation violations
+        (frozenset({"mock_classes"}), "m = Mock()", 0),
+        (frozenset({"mock_classes"}), "m = MagicMock()", 0),
+        # disabling one category does not suppress another
+        (frozenset({"fixtures"}), "m = Mock()", 1),
+        (frozenset({"mock_classes"}), "def test_foo(mocker): pass", 1),
+    ],
+)
+def test_detect_mocks_disabled_categories(disabled, code_snippet, expected_count):
+    violations = detect_mocks(code_snippet, disabled_categories=disabled)
+    assert len(violations) == expected_count

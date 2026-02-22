@@ -117,6 +117,32 @@ Exit with error code if mocks found:
 mockbuster tests/ --strict
 ```
 
+## Configuration
+
+Opt specific categories out of detection via `[tool.mockbuster]` in your project's `pyproject.toml`:
+
+```toml
+[tool.mockbuster]
+disable = ["fixtures"]   # still catches Mock() and patch()
+```
+
+Valid category names:
+
+| Category | What it controls |
+|---|---|
+| `mock_classes` | `Mock()`, `MagicMock()`, `AsyncMock()`, etc. instantiations |
+| `patch` | `@patch` decorators, `patch()` calls, `with patch(...):` |
+| `fixtures` | `mocker` and `monkeypatch` function arguments |
+
+You can also disable categories at runtime with `--disable` (repeatable):
+
+```bash
+mockbuster tests/ --disable fixtures
+mockbuster tests/ --disable mock_classes --disable patch
+```
+
+CLI flags are merged with any `pyproject.toml` config.
+
 ## Development
 
 ```bash
