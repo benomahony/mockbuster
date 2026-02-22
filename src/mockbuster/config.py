@@ -13,6 +13,7 @@ VALID_CATEGORIES: frozenset[str] = frozenset({"mock_classes", "patch", "fixtures
 class MockbusterConfig:
     disabled_categories: frozenset[str] = field(default_factory=frozenset)
     baseline_path: Path = field(default_factory=lambda: Path(DEFAULT_BASELINE_FILENAME))
+    default_path: Path = field(default_factory=lambda: Path("tests/"))
 
 
 def load_config(start_dir: Path | None = None) -> MockbusterConfig:
@@ -62,9 +63,14 @@ def load_config(start_dir: Path | None = None) -> MockbusterConfig:
             assert isinstance(baseline_str, str), "tool.mockbuster.baseline must be a string"
             baseline_path = pyproject_dir / baseline_str
 
+            path_str = section.get("path", "tests/")
+            assert isinstance(path_str, str), "tool.mockbuster.path must be a string"
+            default_path = Path(path_str)
+
             return MockbusterConfig(
                 disabled_categories=frozenset(disable_list),
                 baseline_path=baseline_path,
+                default_path=default_path,
             )
 
     return MockbusterConfig(baseline_path=search_dir.resolve() / DEFAULT_BASELINE_FILENAME)

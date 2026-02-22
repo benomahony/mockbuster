@@ -8,14 +8,34 @@ Add a `[tool.mockbuster]` section to your project's `pyproject.toml`:
 
 ```toml
 [tool.mockbuster]
+path = "tests/"
 disable = ["fixtures"]
 ```
 
-mockbuster walks up from the scanned path to find the nearest `pyproject.toml`.
+mockbuster walks up from the current working directory to find the nearest `pyproject.toml`.
 
 ---
 
 ## Options
+
+### `path`
+
+The directory to scan when mockbuster is invoked with no path arguments. This is the main way to configure a non-default test directory so you don't need to pass the path every time.
+
+**Type:** `str`
+
+**Default:** `"tests/"`
+
+**Example — tests live in `test/` instead of `tests/`:**
+
+```toml
+[tool.mockbuster]
+path = "test/"
+```
+
+The path is kept relative and joined with the current working directory at runtime.
+
+---
 
 ### `disable`
 
@@ -64,12 +84,11 @@ See [CLI Reference](cli.md) for full option details.
 
 ## Config discovery
 
-mockbuster searches for `pyproject.toml` by walking up from the scanned path:
+mockbuster searches for `pyproject.toml` by walking up from the **current working directory**:
 
-1. If a file is scanned, search starts from its parent directory.
-2. If a directory is scanned, search starts from that directory.
-3. Walks up through parent directories until `pyproject.toml` is found or the filesystem root is reached.
-4. If no `pyproject.toml` is found, or it has no `[tool.mockbuster]` section, all categories are enabled.
+1. Search starts from the directory where mockbuster is invoked (cwd).
+2. Walks up through parent directories until `pyproject.toml` is found or the filesystem root is reached.
+3. If no `pyproject.toml` is found, or it has no `[tool.mockbuster]` section, all defaults apply.
 
 ---
 

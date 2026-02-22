@@ -10,17 +10,14 @@ from mockbuster.core import detect_mocks
 
 app = typer.Typer(
     help="Lint and detect mocking usage in Python tests",
-    no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 console = Console()
 
-DEFAULT_TESTS_PATH = Path("tests/")
-
 
 @app.command()
 def scan(
-    path: Path = typer.Argument(default=DEFAULT_TESTS_PATH, help="File or directory to scan"),
+    paths: list[Path] | None = typer.Argument(default=None, help="Files or directories to scan"),
     strict: bool = typer.Option(False, "--strict", help="Exit with error code if mocks found"),
     disable: list[str] = typer.Option(
         [],
@@ -39,12 +36,8 @@ def scan(
     ),
 ) -> None:
     """Scan Python files for mocking usage."""
-    assert path.exists(), f"Path does not exist: {path}"
-    assert os.access(path, os.R_OK), f"Path is not readable: {path}"
-
-    start_dir = path if path.is_dir() else path.parent
     try:
-        config = load_config(start_dir=start_dir)
+        config = load_config(start_dir=Path.cwd())
     except ValueError as e:
         console.print(f"[red]Configuration error: {e}[/red]")
         raise typer.Exit(1)
@@ -62,13 +55,19 @@ def scan(
 
     disabled_categories = frozenset(merged)
 
-    if path.is_file():
-        files = [path]
-    elif path.is_dir():
-        files = sorted(path.rglob("*.py"))
-    else:
-        console.print(f"[red]Error: {path} is not a valid file or directory[/red]")
-        raise typer.Exit(1)
+    effective_paths = paths if paths else [config.default_path]
+
+    files: list[Path] = []
+    for p in effective_paths:
+        assert p.exists(), f"Path does not exist: {p}"
+        assert os.access(p, os.R_OK), f"Path is not readable: {p}"
+        if p.is_file():
+            files.append(p)
+        elif p.is_dir():
+            files.extend(sorted(p.rglob("*.py")))
+        else:
+            console.print(f"[red]Error: {p} is not a valid file or directory[/red]")
+            raise typer.Exit(1)
 
     # Collect all violations keyed by path string
     violations_by_file: dict[str, list[dict]] = {}

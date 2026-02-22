@@ -11,30 +11,33 @@ pip install mockbuster
 ## Usage
 
 ```bash
-mockbuster [PATH] [OPTIONS]
+mockbuster [PATHS]... [OPTIONS]
 ```
 
 ## Arguments
 
-### PATH
+### PATHS
 
-Path to scan for mocking usage. Can be:
+One or more files or directories to scan. Each can be:
 
 - A single Python file
-- A directory (scanned recursively)
+- A directory (scanned recursively for `*.py`)
 
-**Default:** Current directory (`.`)
+**Default:** Falls back to `path` configured in `[tool.mockbuster]` (default: `tests/`)
 
 **Examples:**
 
 ```bash
-# Scan a single file
-mockbuster tests/test_service.py
-
 # Scan a directory
 mockbuster tests/
 
-# Scan current directory
+# Scan a single file
+mockbuster tests/test_service.py
+
+# Scan multiple files (e.g. passed by pre-commit)
+mockbuster tests/test_a.py tests/test_b.py
+
+# No argument — uses path from pyproject.toml
 mockbuster
 ```
 
@@ -169,12 +172,12 @@ Fail the build if mocks are detected:
 mockbuster tests/ --strict
 ```
 
-### Scan Multiple Patterns
+### Scan Multiple Files
 
-Use shell globbing to scan specific patterns:
+Pass multiple paths directly:
 
 ```bash
-mockbuster tests/unit/*.py
+mockbuster tests/unit/test_foo.py tests/integration/test_bar.py
 ```
 
 ### Combine with Other Tools
@@ -206,17 +209,21 @@ lint:
 
 ### Pre-commit Hook
 
+Using the published hook (reads test path from `pyproject.toml`):
+
 ```yaml
 repos:
-  - repo: local
+  - repo: https://github.com/benomahony/mockbuster
+    rev: v0.1.3
     hooks:
       - id: mockbuster
-        name: mockbuster
-        entry: mockbuster
-        language: system
-        types: [python]
-        files: ^tests/
-        args: ["--strict"]
+```
+
+If your tests are not under `tests/`, set `path` in `pyproject.toml`:
+
+```toml
+[tool.mockbuster]
+path = "test/"
 ```
 
 ### GitHub Actions
