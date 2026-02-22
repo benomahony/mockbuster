@@ -181,7 +181,9 @@ def _check_with_statements(
                 f"{patch_name}() context manager detected - "
                 "Use real objects, dependency injection, or integration tests"
             )
-            violations.append({"line": item.context_expr.lineno, "message": msg, "category": "patch"})
+            violations.append(
+                {"line": item.context_expr.lineno, "message": msg, "category": "patch"}
+            )
             if isinstance(item.context_expr, ast.Call):
                 call_id = id(item.context_expr)
                 assert call_id not in processed_calls, "Call ID should not be already processed"
@@ -208,7 +210,9 @@ def detect_mocks(
     assert code is not None, "Code must not be None"
     assert isinstance(code, str), "Code must be a string"
 
-    disabled: frozenset[str] = disabled_categories if disabled_categories is not None else frozenset()
+    disabled: frozenset[str] = (
+        disabled_categories if disabled_categories is not None else frozenset()
+    )
     violations: list[dict[str, str | int]] = []
     processed_calls: set[int] = set()
 

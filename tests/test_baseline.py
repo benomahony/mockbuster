@@ -169,7 +169,9 @@ def test_cli_baseline_reports_new_violation():
     with runner.isolated_filesystem():
         Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\n")
         runner.invoke(app, [".", "--update-baseline"])
-        Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\ndef test_bar():\n    n = Mock()\n")
+        Path("test_foo.py").write_text(
+            "def test_foo():\n    m = Mock()\ndef test_bar():\n    n = Mock()\n"
+        )
         result = runner.invoke(app, ["."])
         assert "Found 1 mock usage(s)" in result.output
         assert "baselined" in result.output

@@ -60,6 +60,7 @@ mockbuster tests/ --update-baseline
 ```
 
 Output:
+
 ```
 Baseline written: 14 violation(s) across 3 file(s) suppressed.
 ```
