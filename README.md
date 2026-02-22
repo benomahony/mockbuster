@@ -143,6 +143,16 @@ mockbuster tests/ --disable mock_classes --disable patch
 
 CLI flags are merged with any `pyproject.toml` config.
 
+### Baseline
+
+Suppress existing violations so CI only catches new ones:
+
+```bash
+mockbuster tests/ --update-baseline   # record current state
+git add .mockbuster-baseline.json     # commit it
+mockbuster tests/ --strict            # CI: only new violations fail the build
+```
+
 ## Development
 
 ```bash

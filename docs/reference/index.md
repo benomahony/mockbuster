@@ -7,6 +7,7 @@ Technical reference for mockbuster.
 - **[CLI Reference](cli.md)** - Command-line interface options and usage
 - **[API Reference](api.md)** - Python API documentation
 - **[Configuration](configuration.md)** - `pyproject.toml` configuration options
+- **[Baseline](baseline.md)** - Suppress existing violations, enforce only new ones
 - **[Detected Patterns](patterns.md)** - Complete list of mock patterns detected by mockbuster
 
 ## Quick Links

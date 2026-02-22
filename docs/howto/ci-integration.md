@@ -216,6 +216,17 @@ If you have an existing codebase with mocks:
 3. **Add per-line ignores** - Temporarily skip specific lines with `# mockbuster: ignore`
 4. **Enable strict mode** - Once all violations are fixed
 
+### Use a baseline to suppress existing violations
+
+The fastest path to adding mockbuster to CI without breaking the build:
+
+```bash
+mockbuster tests/ --update-baseline
+git add .mockbuster-baseline.json
+```
+
+Now CI only fails on **new** violations. Shrink the baseline over time by refactoring files and re-running `--update-baseline`. See [Baseline Reference](../reference/baseline.md) for full details.
+
 ### Disable categories via pyproject.toml
 
 Start with all categories disabled, then remove entries as you refactor:

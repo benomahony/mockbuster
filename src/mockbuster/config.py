@@ -4,12 +4,15 @@ import tomllib
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from mockbuster.baseline import DEFAULT_BASELINE_FILENAME
+
 VALID_CATEGORIES: frozenset[str] = frozenset({"mock_classes", "patch", "fixtures"})
 
 
 @dataclass
 class MockbusterConfig:
     disabled_categories: frozenset[str] = field(default_factory=frozenset)
+    baseline_path: Path = field(default_factory=lambda: Path(DEFAULT_BASELINE_FILENAME))
 
 
 def load_config(start_dir: Path | None = None) -> MockbusterConfig:
@@ -21,7 +24,7 @@ def load_config(start_dir: Path | None = None) -> MockbusterConfig:
         start_dir: Directory to start searching from. Defaults to cwd.
 
     Returns:
-        MockbusterConfig with disabled_categories populated from config.
+        MockbusterConfig populated from config.
 
     Raises:
         ValueError: If an unknown category name is found in the config.
@@ -35,9 +38,15 @@ def load_config(start_dir: Path | None = None) -> MockbusterConfig:
             with pyproject.open("rb") as f:
                 data = tomllib.load(f)
 
+            # Always resolve to an absolute path so the baseline lands next to
+            # pyproject.toml regardless of where the scan path is.
+            pyproject_dir = directory.resolve()
+
             section = data.get("tool", {}).get("mockbuster", {})
             if not section:
-                return MockbusterConfig()
+                return MockbusterConfig(
+                    baseline_path=pyproject_dir / DEFAULT_BASELINE_FILENAME,
+                )
 
             disable_list = section.get("disable", [])
             assert isinstance(disable_list, list), "tool.mockbuster.disable must be a list"
@@ -49,6 +58,13 @@ def load_config(start_dir: Path | None = None) -> MockbusterConfig:
                         f"Valid categories: {', '.join(sorted(VALID_CATEGORIES))}"
                     )
 
-            return MockbusterConfig(disabled_categories=frozenset(disable_list))
+            baseline_str = section.get("baseline", DEFAULT_BASELINE_FILENAME)
+            assert isinstance(baseline_str, str), "tool.mockbuster.baseline must be a string"
+            baseline_path = pyproject_dir / baseline_str
 
-    return MockbusterConfig()
+            return MockbusterConfig(
+                disabled_categories=frozenset(disable_list),
+                baseline_path=baseline_path,
+            )
+
+    return MockbusterConfig(baseline_path=search_dir.resolve() / DEFAULT_BASELINE_FILENAME)
