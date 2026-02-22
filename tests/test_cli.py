@@ -7,19 +7,17 @@ from mockbuster.cli import app
 runner = CliRunner()
 
 
-def test_scan_file_with_mocks(tmp_path: Path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    test_file = tmp_path / "test_mocks.py"
-    test_file.write_text("""
+def test_scan_file_with_mocks():
+    with runner.isolated_filesystem():
+        Path("test_mocks.py").write_text("""
 from unittest.mock import Mock
 
 def test_foo():
     mock_obj = Mock()
 """)
-
-    result = runner.invoke(app, [str(test_file)])
-    assert result.exit_code == 0
-    assert "Mock()" in result.stdout  # Detects usage, not import
+        result = runner.invoke(app, ["test_mocks.py"])
+        assert result.exit_code == 0
+        assert "Mock()" in result.stdout  # Detects usage, not import
 
 
 def test_scan_file_clean(tmp_path: Path):

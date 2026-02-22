@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -143,125 +144,91 @@ def test_write_baseline_creates_valid_json(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def _write_py(tmp_path, filename, content):
-    f = tmp_path / filename
-    f.write_text(content)
-    return f
+def test_cli_update_baseline_creates_file():
+    with runner.isolated_filesystem():
+        Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\n")
+        result = runner.invoke(app, [".", "--update-baseline"])
+        assert result.exit_code == 0
+        assert "Baseline written" in result.output
+        assert Path(".mockbuster-baseline.json").exists()
+        data = json.loads(Path(".mockbuster-baseline.json").read_text())
+        assert len(data) >= 1
 
 
-def test_cli_update_baseline_creates_file(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
-    result = runner.invoke(app, [str(tmp_path), "--update-baseline"])
-    assert result.exit_code == 0
-    assert "Baseline written" in result.output
-    baseline_file = tmp_path / ".mockbuster-baseline.json"
-    assert baseline_file.exists()
-    data = json.loads(baseline_file.read_text())
-    # At least one file recorded
-    assert len(data) >= 1
+def test_cli_baseline_suppresses_existing_violations():
+    with runner.isolated_filesystem():
+        Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\n")
+        runner.invoke(app, [".", "--update-baseline"])
+        result = runner.invoke(app, ["."])
+        assert result.exit_code == 0
+        assert "No new mocking usage detected" in result.output
+        assert "baselined" in result.output
 
 
-def test_cli_baseline_suppresses_existing_violations(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
-
-    # First: record baseline
-    runner.invoke(app, [str(tmp_path), "--update-baseline"])
-
-    # Second run: violations should be suppressed
-    result = runner.invoke(app, [str(tmp_path)])
-    assert result.exit_code == 0
-    assert "No new mocking usage detected" in result.output
-    assert "baselined" in result.output
+def test_cli_baseline_reports_new_violation():
+    with runner.isolated_filesystem():
+        Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\n")
+        runner.invoke(app, [".", "--update-baseline"])
+        Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\ndef test_bar():\n    n = Mock()\n")
+        result = runner.invoke(app, ["."])
+        assert "Found 1 mock usage(s)" in result.output
+        assert "baselined" in result.output
 
 
-def test_cli_baseline_reports_new_violation(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
-
-    # Record baseline with 1 Mock()
-    runner.invoke(app, [str(tmp_path), "--update-baseline"])
-
-    # Add a second Mock() — should trigger 1 new violation
-    _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\ndef test_bar():\n    n = Mock()\n")
-    result = runner.invoke(app, [str(tmp_path)])
-    assert "Found 1 mock usage(s)" in result.output
-    assert "baselined" in result.output
-
-
-def test_cli_update_baseline_subpath_preserves_other_entries(tmp_path, monkeypatch):
+def test_cli_update_baseline_subpath_preserves_other_entries():
     """--update-baseline on a subpath must not wipe baseline entries for other files."""
-    monkeypatch.chdir(tmp_path)
-    unit = tmp_path / "unit"
-    integration = tmp_path / "integration"
-    unit.mkdir()
-    integration.mkdir()
+    with runner.isolated_filesystem():
+        Path("unit").mkdir()
+        Path("integration").mkdir()
+        Path("unit/test_unit.py").write_text("def test_u():\n    m = Mock()\n")
+        Path("integration/test_integration.py").write_text("def test_i():\n    m = Mock()\n")
 
-    _write_py(unit, "test_unit.py", "def test_u():\n    m = Mock()\n")
-    _write_py(integration, "test_integration.py", "def test_i():\n    m = Mock()\n")
+        runner.invoke(app, [".", "--update-baseline"])
+        full_data = json.loads(Path(".mockbuster-baseline.json").read_text())
+        assert len(full_data) == 2
 
-    # Baseline the full directory
-    runner.invoke(app, [str(tmp_path), "--update-baseline"])
-
-    baseline_file = tmp_path / ".mockbuster-baseline.json"
-    full_data = json.loads(baseline_file.read_text())
-    assert len(full_data) == 2
-
-    # Re-baseline only the unit subdir
-    runner.invoke(app, [str(unit), "--update-baseline"])
-
-    partial_data = json.loads(baseline_file.read_text())
-    # Both files must still be present in the baseline
-    assert len(partial_data) == 2
+        runner.invoke(app, ["unit", "--update-baseline"])
+        partial_data = json.loads(Path(".mockbuster-baseline.json").read_text())
+        assert len(partial_data) == 2
 
 
-def test_cli_no_baseline_shows_all(tmp_path, monkeypatch):
-    monkeypatch.chdir(tmp_path)
-    _write_py(tmp_path, "test_foo.py", "def test_foo():\n    m = Mock()\n")
-
-    # Record baseline
-    runner.invoke(app, [str(tmp_path), "--update-baseline"])
-
-    # --no-baseline should report all violations
-    result = runner.invoke(app, [str(tmp_path), "--no-baseline"])
-    assert "Found" in result.output
-    assert "Mock()" in result.output
+def test_cli_no_baseline_shows_all():
+    with runner.isolated_filesystem():
+        Path("test_foo.py").write_text("def test_foo():\n    m = Mock()\n")
+        runner.invoke(app, [".", "--update-baseline"])
+        result = runner.invoke(app, [".", "--no-baseline"])
+        assert "Found" in result.output
+        assert "Mock()" in result.output
 
 
-def test_cli_multiple_file_args(tmp_path, monkeypatch):
+def test_cli_multiple_file_args():
     """Multiple file paths are all scanned."""
-    monkeypatch.chdir(tmp_path)
-    f1 = _write_py(tmp_path, "test_a.py", "def test_a():\n    m = Mock()\n")
-    f2 = _write_py(tmp_path, "test_b.py", "def test_b():\n    m = Mock()\n")
+    with runner.isolated_filesystem():
+        Path("test_a.py").write_text("def test_a():\n    m = Mock()\n")
+        Path("test_b.py").write_text("def test_b():\n    m = Mock()\n")
+        result = runner.invoke(app, ["test_a.py", "test_b.py"])
+        assert result.exit_code == 0
+        assert "test_a.py" in result.output
+        assert "test_b.py" in result.output
+        assert "Found 2 mock usage(s)" in result.output
 
-    result = runner.invoke(app, [str(f1), str(f2)])
-    assert result.exit_code == 0
-    assert "test_a.py" in result.output
-    assert "test_b.py" in result.output
-    assert "Found 2 mock usage(s)" in result.output
 
-
-def test_cli_dir_arg_scans_recursively(tmp_path, monkeypatch):
+def test_cli_dir_arg_scans_recursively():
     """A directory argument recursively finds all .py files."""
-    monkeypatch.chdir(tmp_path)
-    sub = tmp_path / "sub"
-    sub.mkdir()
-    _write_py(sub, "test_nested.py", "def test_n():\n    m = Mock()\n")
-
-    result = runner.invoke(app, [str(tmp_path)])
-    assert result.exit_code == 0
-    assert "test_nested.py" in result.output
+    with runner.isolated_filesystem():
+        Path("sub").mkdir()
+        Path("sub/test_nested.py").write_text("def test_n():\n    m = Mock()\n")
+        result = runner.invoke(app, ["."])
+        assert result.exit_code == 0
+        assert "test_nested.py" in result.output
 
 
-def test_cli_no_args_uses_config_path(tmp_path, monkeypatch):
-    """No positional args → falls back to default_path from config (tests/)."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / "pyproject.toml").write_text('[tool.mockbuster]\npath = "mytests/"\n')
-    mytests = tmp_path / "mytests"
-    mytests.mkdir()
-    _write_py(mytests, "test_foo.py", "def test_foo():\n    m = Mock()\n")
-
-    result = runner.invoke(app, [])
-    assert result.exit_code == 0
-    assert "test_foo.py" in result.output
+def test_cli_no_args_uses_config_path():
+    """No positional args → falls back to default_path from config."""
+    with runner.isolated_filesystem():
+        Path("pyproject.toml").write_text('[tool.mockbuster]\npath = "mytests/"\n')
+        Path("mytests").mkdir()
+        Path("mytests/test_foo.py").write_text("def test_foo():\n    m = Mock()\n")
+        result = runner.invoke(app, [])
+        assert result.exit_code == 0
+        assert "test_foo.py" in result.output
