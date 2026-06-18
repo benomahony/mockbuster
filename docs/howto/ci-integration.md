@@ -67,7 +67,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/benomahony/mockbuster
-    rev: v0.1.3
+    rev: v0.1.4
     hooks:
       - id: mockbuster
 ```
